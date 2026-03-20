@@ -126,11 +126,11 @@ services:
 
   queue-short:
     <<: *backend_defaults
-    command: bench worker --num-workers 2 --queue short,default
+    command: bench worker --queue short,default
 
   queue-long:
     <<: *backend_defaults
-    command: bench worker --num-workers 1 --queue long
+    command: bench worker --queue long
 
   scheduler:
     <<: *backend_defaults
