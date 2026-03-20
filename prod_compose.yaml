@@ -62,6 +62,57 @@ services:
       configurator:
         condition: service_completed_successfully
 
+  setup-erpnext:
+    <<: *customizable_image
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    entrypoint:
+      - bash
+      - -c
+    command:
+      - >
+        if [ -f sites/frontend/.setup_complete ]; then
+          echo "Setup already complete, skipping.";
+          exit 0;
+        fi;
+        wait-for-it -t 120 db:3306;
+        wait-for-it -t 120 redis-cache:6379;
+        wait-for-it -t 120 redis-queue:6379;
+        export start=`date +%s`;
+        until [[ -f sites/frontend/site_config.json ]]; do
+          echo "Waiting for site creation...";
+          sleep 10;
+          if (( `date +%s`-start > 600 )); then echo "Timed out waiting for site"; exit 1; fi;
+        done;
+        echo "Site found, waiting for DB tables...";
+        sleep 30;
+        bench --site frontend set-admin-password admin;
+        bench --site frontend execute frappe.client.set_value --args '["User", "Administrator", "email", "admin@admin.com"]';
+        bench --site frontend execute erpnext.setup.setup_wizard.setup_wizard.setup_complete --kwargs '{
+          "language": "English",
+          "currency": "UAH",
+          "country": "Ukraine",
+          "chart_of_accounts": "Standard",
+          "company_name": "SS",
+          "company_abbr": "SS",
+          "company_tagline": "",
+          "bank_account": "",
+          "domains": ["Distribution"],
+          "fy_start_date": "2026-01-01",
+          "fy_end_date": "2026-12-31"
+        }';
+        bench --site frontend enable-scheduler;
+        bench --site frontend migrate;
+        touch sites/frontend/.setup_complete;
+        echo "ERPNext setup complete!";
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+
   db:
     image: mariadb:10.6
     healthcheck:
