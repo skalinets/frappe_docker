@@ -94,7 +94,7 @@ services:
         bench --site frontend execute frappe.client.set_value --args '["User", "Administrator", "email", "admin@admin.com"]';
         bench --site frontend execute erpnext.setup.setup_wizard.setup_wizard.setup_complete --kwargs '{
           "language": "English",
-          "currency": "UAH",
+          "currency": "EUR",
           "country": "Ukraine",
           "chart_of_accounts": "Standard",
           "company_name": "SS",
